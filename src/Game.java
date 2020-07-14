@@ -22,6 +22,7 @@ public class Game {
     private int x, y;
     private boolean waiting = true;
     private boolean canMove = false; // Can the player move? (Possible end condition)
+    private static Game game = null;
 
     /**
      * Only allows one instance of a game at a time.
@@ -29,7 +30,8 @@ public class Game {
      * @return a new Game instance
      */
     static public Game newGame() {
-        return new Game();
+        if (game == null) {game = new Game();}
+        return game;
     }
 
     /**
@@ -398,15 +400,16 @@ public class Game {
     }
 
     private void endGame(JFrame frame) {
-        int blackCount = 0;
+        int blackCount = 0, whiteCount = 0;
         String message = "";
         for (char[] row : board) {
             for (char space : row) {
                 if (space == 'b')
                     blackCount++;
+                else if(space == 'w')
+                    whiteCount++;
             }
         }
-        int whiteCount = 64 - blackCount;
         if (blackCount > whiteCount)
             message += "Black Wins!\n";
         else if (whiteCount > blackCount)
@@ -419,7 +422,7 @@ public class Game {
     }
 
     public String toString() {
-        String retStr = "";
+        String retStr = "\n";
         for (char[] row : board) {
             for (char space : row)
                 retStr += space + " ";
