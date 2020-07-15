@@ -1,9 +1,6 @@
 import java.util.ArrayList;
 import java.util.Collections;
 
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-
 /**
  * Game class handles everything game-related. Stores board state, generates
  * allowable moves, determines if end-game condition has been met, etc. Board
@@ -19,8 +16,8 @@ public class Game {
     private char[][] board = new char[8][8];
     private char player;
     private int x, y;
-    private boolean waiting = true;
-    private boolean canMove = false; // Can the player move? (End condition)
+    private boolean waiting;
+    private boolean canMove; // Can the player move? (End condition)
     private static Game game = null;
 
     /**
@@ -37,6 +34,15 @@ public class Game {
      * Constructor should initialize game state.
      */
     private Game() {
+        set();
+    }
+
+    /**
+     * Set/Reset the board state
+     */
+    public void set() {
+        waiting = true;
+        canMove = false;
         for (int i = 0; i < board[0].length; i++) {
             for (int j = 0; j < board[0].length; j++) {
                 board[i][j] = 'e';
@@ -52,16 +58,16 @@ public class Game {
     /**
      * Method to start and control the game's flow
      *
-     * @param frame
+     * @param gui
      * @throws InterruptedException
      */
-    public void start(JFrame frame) throws InterruptedException {
+    public void start(GUI gui) throws InterruptedException {
         x = 0;
         y = 0;
         boolean turnFlag = false;
         boolean noMoveFlag = false;
         System.out.print(this);
-        while (!noMoveFlag) {
+        while (true) {
             ArrayList<ArrayList<Pair>> moves = generateMoves(player, board);
             if (canMove) {
                 noMoveFlag = false;
@@ -78,8 +84,8 @@ public class Game {
                 }
             } else { // if this player can't move
                 if (noMoveFlag) { // and the other player cant move
-                    endGame(frame); // end game
-                    break;
+                    gui.showEndDialog(endGame());
+                    player = 'w'; //if player chooses to play again, game will change player to black
                 }
                 else { // skip Player's turn
                     noMoveFlag = true;
@@ -91,7 +97,6 @@ public class Game {
             changePlayer();
             System.out.print(this);
         }
-        endGame(frame);
     }
 
     private void changePlayer() {
@@ -395,30 +400,26 @@ public class Game {
         return null; // null indicates this is not a viable move
     }
 
-    private void endGame(JFrame frame) {
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                int blackCount = 0, whiteCount = 0;
-                String message = "";
-                for (char[] row : board) {
-                    for (char space : row) {
-                        if (space == 'b')
-                            blackCount++;
-                        else if(space == 'w')
-                            whiteCount++;
-                    }
-                }
-                if (blackCount > whiteCount)
-                    message += "Black Wins!\n";
-                else if (whiteCount > blackCount)
-                    message += "White Wins!\n";
-                else
-                    message += "Tie!\n";
-                message += "Black: " + blackCount + "\n";
-                message += "White: " + whiteCount + "\n";
-                JOptionPane.showMessageDialog(frame, message, "Game Over", JOptionPane.PLAIN_MESSAGE);
+    private String endGame() {
+        int blackCount = 0, whiteCount = 0;
+        String message = "";
+        for (char[] row : board) {
+            for (char space : row) {
+                if (space == 'b')
+                    blackCount++;
+                else if(space == 'w')
+                    whiteCount++;
             }
-        });
+        }
+        if (blackCount > whiteCount)
+            message += "Black Wins!\n";
+        else if (whiteCount > blackCount)
+            message += "White Wins!\n";
+        else
+            message += "Tie!\n";
+        message += "Black: " + blackCount + "\n";
+        message += "White: " + whiteCount + "\n";
+        return message;
     }
 
     public String toString() {
