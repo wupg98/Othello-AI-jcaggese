@@ -34,6 +34,8 @@ public class Square extends JPanel {
         player = Color.BLACK;
     }
 
+    public void resetColor() {player = boardColor;}
+
     public int getI() {
         return i;
     }

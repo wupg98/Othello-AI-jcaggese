@@ -73,11 +73,12 @@ public class GUI extends JFrame implements MouseListener {
     private void updateSquares(char[][] board, JPanel gamePanel) {
         for (int i = 0; i < board[0].length; i++) {
             for (int j = 0; j < board[0].length; j++) {
-                if (board[i][j] == 'w') {
+                if (board[i][j] == 'w')
                     ((Square) gamePanel.getComponent(8 * i + j)).setWhite();
-                } else if (board[i][j] == 'b') {
+                else if (board[i][j] == 'b')
                     ((Square) gamePanel.getComponent(8 * i + j)).setBlack();
-                }
+                else
+                    ((Square) gamePanel.getComponent(8 * i + j)).resetColor();
             }
         }
     }
@@ -90,29 +91,55 @@ public class GUI extends JFrame implements MouseListener {
      * @throws InterruptedException
      */
     private void updateState(int i, int j) {
-        game.setChoice(i, j);
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        player = game.getPlayer();
-        playerLabel.setText(player + "'s Turn.");
-        updateSquares(game.getBoard(), gamePanel);
-        repaint();
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                game.setChoice(i,j);
+                try {
+                    Thread.sleep(150);
+                } catch(InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                player =game.getPlayer();
+                playerLabel.setText(player +"'s Turn.");
 
-        if (player.equals(opponent.getPlayer())) {
-            Pair aiChoice = opponent.getMove();
-            updateState(aiChoice.getX(), aiChoice.getY());
-        }
+                updateSquares(game.getBoard(),gamePanel);
 
+                repaint();
+                try
+                {
+                    Thread.sleep(100);
+                } catch(InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+
+                // should AI control be here rather than Game?
+                if(player.equals(opponent.getPlayer())) {
+                    Pair aiChoice = opponent.getMove();
+                    updateState(aiChoice.getX(), aiChoice.getY());
+                }
+            }
+        });
+    }
+
+    public void showEndDialog(String message) {
+        try {
+            SwingUtilities.invokeAndWait(new Runnable() {
+                public void run() {
+                    int choice = JOptionPane.showOptionDialog(getSelf(), message, "Game Over", JOptionPane.DEFAULT_OPTION,
+                            JOptionPane.PLAIN_MESSAGE, null, new String[]{"Play again", "Quit"}, null);
+                    if (choice == 0) {
+                        game.set();
+                        try {
+                            Thread.sleep(250); // make sure game has reset before update
+                            updateSquares(game.getBoard(), gamePanel);
+                        } catch (Exception e) { }
+                    } else if (choice == 1)
+                        System.exit(0);
+                }
+            });
+        }catch(Exception e) {e.printStackTrace();}
     }
 
     @Override
@@ -141,5 +168,9 @@ public class GUI extends JFrame implements MouseListener {
         Square sq = (Square) e.getSource();
         updateState(sq.getI(), sq.getJ());
         e.consume();
+    }
+
+    public GUI getSelf() {
+        return this;
     }
 }

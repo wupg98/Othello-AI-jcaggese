@@ -1,9 +1,6 @@
 import java.util.ArrayList;
 import java.util.Collections;
 
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-
 /**
  * Game class handles everything game-related. Stores board state, generates
  * allowable moves, determines if end-game condition has been met, etc. Board
@@ -18,10 +15,10 @@ import javax.swing.JOptionPane;
 public class Game {
     private char[][] board = new char[8][8];
     private char player;
-    private int turns; // Game ends in 60 turns, when board is full
     private int x, y;
-    private boolean waiting = true;
-    private boolean canMove = false; // Can the player move? (Possible end condition)
+    private boolean waiting;
+    private boolean canMove; // Can the player move? (End condition)
+    private static Game game = null;
 
     /**
      * Only allows one instance of a game at a time.
@@ -29,13 +26,23 @@ public class Game {
      * @return a new Game instance
      */
     static public Game newGame() {
-        return new Game();
+        if (game == null) {game = new Game();}
+        return game;
     }
 
     /**
      * Constructor should initialize game state.
      */
     private Game() {
+        set();
+    }
+
+    /**
+     * Set/Reset the board state
+     */
+    public void set() {
+        waiting = true;
+        canMove = false;
         for (int i = 0; i < board[0].length; i++) {
             for (int j = 0; j < board[0].length; j++) {
                 board[i][j] = 'e';
@@ -46,51 +53,50 @@ public class Game {
         board[3][4] = 'b';
         board[4][3] = 'b';
         player = 'b'; // By convention, black starts
-        turns = 0;
     }
 
     /**
      * Method to start and control the game's flow
      *
-     * @param frame
+     * @param gui
      * @throws InterruptedException
      */
-    public void start(JFrame frame) throws InterruptedException {
+    public void start(GUI gui) throws InterruptedException {
         x = 0;
         y = 0;
-        boolean indexFlag = false;
+        boolean turnFlag = false;
         boolean noMoveFlag = false;
         System.out.print(this);
-        while (turns < 60) {
-            while (!indexFlag) {
-                while (waiting) {
-                    Thread.sleep(100);
-                } // waiting for input
-                indexFlag = true;
-                if (!selectSpace(x, y, player)) {
-                    if (canMove) {
-                        indexFlag = false;
+        while (true) {
+            ArrayList<ArrayList<Pair>> moves = generateMoves(player, board);
+            if (canMove) {
+                noMoveFlag = false;
+                while (!turnFlag) {
+                    while (waiting) {
+                        Thread.sleep(100);
+                    } // waiting for input
+                    turnFlag = true; // Player has taken their turn
+                    if (!selectSpace(x, y, player, moves)) {
+                        turnFlag = false;
                         waiting = true;
                         System.err.println("This is not a valid space");
-                    } else { // if this player can't move
-                        if (noMoveFlag) // and the other player cant move
-                            endGame(frame); // end game
-                        else { // skip Player's turn
-                            noMoveFlag = true;
-                            turns--; // reset the turn counter
-                        }
                     }
                 }
+            } else { // if this player can't move
+                if (noMoveFlag) { // and the other player cant move
+                    gui.showEndDialog(endGame());
+                    player = 'w'; //if player chooses to play again, game will change player to black
+                }
+                else { // skip Player's turn
+                    noMoveFlag = true;
+                }
             }
-            noMoveFlag = false;
             canMove = false;
             waiting = true;
-            indexFlag = false;
+            turnFlag = false;
             changePlayer();
             System.out.print(this);
-            turns++;
         }
-        endGame(frame);
     }
 
     private void changePlayer() {
@@ -126,9 +132,8 @@ public class Game {
      *
      * @return True if the move succeeded
      */
-    private boolean selectSpace(int i, int j, char player) {
+    private boolean selectSpace(int i, int j, char player, ArrayList<ArrayList<Pair>> moves) {
         boolean flag = false;
-        ArrayList<ArrayList<Pair>> moves = generateMoves(player, board);
         for (ArrayList<Pair> pairs : moves) {
             if (pairs != null) {
                 if (new Pair(i, j).equals(pairs.get(0))) {
@@ -138,8 +143,6 @@ public class Game {
                 }
             }
         }
-        if (flag)
-            board[i][j] = player; // add new piece to board
         return flag;
     }
 
@@ -155,7 +158,7 @@ public class Game {
     public void swap(char player, ArrayList<Pair> pairs, char[][] board) {
         int size = pairs.size();
         Pair pair = null;
-        for (int i = 1; i < size; i++) {
+        for (int i = 0; i < size; i++) {
             pair = pairs.get(i);
             board[pair.getX()][pair.getY()] = player;
         }
@@ -397,16 +400,17 @@ public class Game {
         return null; // null indicates this is not a viable move
     }
 
-    private void endGame(JFrame frame) {
-        int blackCount = 0;
+    private String endGame() {
+        int blackCount = 0, whiteCount = 0;
         String message = "";
         for (char[] row : board) {
             for (char space : row) {
                 if (space == 'b')
                     blackCount++;
+                else if(space == 'w')
+                    whiteCount++;
             }
         }
-        int whiteCount = 64 - blackCount;
         if (blackCount > whiteCount)
             message += "Black Wins!\n";
         else if (whiteCount > blackCount)
@@ -415,11 +419,11 @@ public class Game {
             message += "Tie!\n";
         message += "Black: " + blackCount + "\n";
         message += "White: " + whiteCount + "\n";
-        JOptionPane.showMessageDialog(frame, message, "Game Over", JOptionPane.PLAIN_MESSAGE);
+        return message;
     }
 
     public String toString() {
-        String retStr = "";
+        String retStr = "\n";
         for (char[] row : board) {
             for (char space : row)
                 retStr += space + " ";
