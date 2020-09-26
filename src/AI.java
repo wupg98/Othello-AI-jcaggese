@@ -1,6 +1,8 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Stack;
 
 /**
@@ -19,6 +21,7 @@ public class AI {
     private Game game;
     private int depth = 5; // depth of minimax search
     private int select; // heuristic choice
+    private HashMap<Pair, Integer> heuristicMap = new HashMap<>();
 
     /**
      * Construct AI
@@ -45,21 +48,29 @@ public class AI {
         char[][] checkBoard;
         // Generate pairs that correspond to first layer board states
         ArrayList<ArrayList<Pair>> plays = game.generateMoves(player, game.getBoard());
+        LinkedHashSet<Pair> moveSet = new LinkedHashSet<>();
+        plays.forEach(play -> moveSet.add(play.get(0))); // Unique moves, maintained insertion order
+        ArrayList<Pair> moves = new ArrayList<>(moveSet);
         if (plays.isEmpty()) // hack to fix a bug where the stack is empty at no plays
-            return new Pair(0, 0);
+            return new Pair(-1, -1);
         Stack<char[][]> boards = generateBoards(player, game.getBoard());
         if (!boards.empty()) {
+            // track heuristics
+            heuristicMap.clear();
             checkBoard = boards.pop();
             max = minimaxR(true, null, null, 1, generateBoards(player, checkBoard), checkBoard);
             // this max can be used to prune the tree at the highest level, used as
             // rootValMAX in next call
-            choice = plays.get(0).get(0);
-            for (int i = 1; i < plays.size(); i++) {
+            choice = moves.get(0);
+            heuristicMap.put(choice, max);
+            for (int i = 1; i < moves.size(); i++) {
                 checkBoard = boards.pop();
+                Pair play = moves.get(i);
                 check = minimaxR(true, max, null, 1, generateBoards(player, checkBoard), checkBoard);
+                heuristicMap.put(play ,check);
                 if (check > max) {
                     max = check;
-                    choice = plays.get(i).get(0);
+                    choice = play;
                 }
             }
         }
@@ -145,12 +156,8 @@ public class AI {
      * Generate the possible boards from the set of possible moves
      *
      * @param player
-     * @param moves
-     *            The possible moves
      * @param board
      *            The current board state
-     * @param boards
-     *            A stack of possible board states (The minimax "tree")
      * @return
      */
     private Stack<char[][]> generateBoards(char player, char[][] board) {
@@ -274,8 +281,6 @@ public class AI {
             }
         }
         retBoard[pair.getX()][pair.getY()] = player; // add new piece to board
-        // printBoard(board);
-        // printBoard(retBoard);
         return retBoard;
     }
 
@@ -302,5 +307,9 @@ public class AI {
             return "White";
         else
             return "Black";
+    }
+
+    public HashMap getHeuristicMap(){
+        return heuristicMap;
     }
 }

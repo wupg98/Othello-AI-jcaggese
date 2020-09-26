@@ -66,7 +66,6 @@ public class Game {
         y = 0;
         boolean turnFlag = false;
         boolean noMoveFlag = false;
-        System.out.print(this);
         while (true) {
             ArrayList<ArrayList<Pair>> moves = generateMoves(player, board);
             if (canMove) {
@@ -95,7 +94,6 @@ public class Game {
             waiting = true;
             turnFlag = false;
             changePlayer();
-            System.out.print(this);
         }
     }
 

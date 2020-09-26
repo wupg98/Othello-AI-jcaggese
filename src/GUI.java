@@ -2,6 +2,9 @@ import java.awt.*;
 import java.awt.event.*;
 
 import javax.swing.*;
+import javax.swing.plaf.LayerUI;
+
+import java.util.HashMap;
 
 /**
  * GUI for Othello game Takes player inputs and displays game state
@@ -11,11 +14,13 @@ import javax.swing.*;
  * @course Concepts in Artificial Intelligence
  */
 
-public class GUI extends JFrame implements MouseListener {
+public class GUI extends JFrame implements MouseListener, ItemListener {
     private String player = "Black";
     private Game game;
     private JPanel gamePanel;
     private JLabel playerLabel;
+    private JMenuBar menuBar;
+    private JCheckBoxMenuItem debugOnCB;
     private AI opponent;
 
     public GUI(String title, Game game, AI opp) throws InterruptedException {
@@ -23,6 +28,7 @@ public class GUI extends JFrame implements MouseListener {
         this.game = game;
         opponent = opp;
         gamePanel = new JPanel(new GridBagLayout());
+        createMenus();
         addSquares(gamePanel);
         updateSquares(game.getBoard(), gamePanel);
 
@@ -46,19 +52,63 @@ public class GUI extends JFrame implements MouseListener {
         game.start(this);
     }
 
+    private class OverlayLayerUI extends LayerUI<JComponent> {
+        private String overlayText = "";
+        private boolean isVisible = false;
+
+        @Override
+        public void paint(Graphics g, JComponent c) {
+            super.paint(g, c);
+
+            if (isVisible) {
+                g.setColor(Color.RED);
+                g.setFont(new Font("SansSerif", Font.BOLD, 14));
+                g.drawString(overlayText, c.getWidth() / 4, c.getHeight() / 2 + 4);
+            }
+        }
+
+        public void setText(String text) {
+            overlayText = text;
+        }
+
+        public void setVisibility(boolean isVisible) {
+            this.isVisible = isVisible;
+        }
+
+        public boolean isVisible() {
+            return isVisible;
+        }
+    }
+
+    /**
+     *  Add Menus to JFrame
+     */
+    private void createMenus() {
+        menuBar = new JMenuBar();
+        JMenu debugMenu = new JMenu("Debug Mode");
+        debugOnCB = new JCheckBoxMenuItem("Show Heuristic Values");
+        debugOnCB.addItemListener(this);
+        debugMenu.add(debugOnCB);
+        menuBar.add(debugMenu);
+        setJMenuBar(menuBar);
+    }
+
+
     /**
      * Add Squares to panel
      *
      * @param gamePanel
      */
     private void addSquares(JPanel gamePanel) {
-        Square sq;
+
         GridBagConstraints c = new GridBagConstraints();
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 c.gridx = j;
                 c.gridy = i;
-                sq = new Square(i, j);
+                Square sqComponent = new Square(i, j);
+                OverlayLayerUI sqLayerUI = new OverlayLayerUI();
+                JLayer sq = new JLayer(sqComponent, sqLayerUI);
                 sq.addMouseListener(this);
                 gamePanel.add(sq, c);
             }
@@ -71,14 +121,23 @@ public class GUI extends JFrame implements MouseListener {
      * @param board
      */
     private void updateSquares(char[][] board, JPanel gamePanel) {
+        HashMap<Pair, Integer> heuristicMap = opponent.getHeuristicMap();
         for (int i = 0; i < board[0].length; i++) {
             for (int j = 0; j < board[0].length; j++) {
+                JLayer sqLayer = (JLayer) gamePanel.getComponent(8 * i + j);
+                OverlayLayerUI sqOverlay = (OverlayLayerUI) sqLayer.getUI();
+                Square sq = (Square)sqLayer.getView();
                 if (board[i][j] == 'w')
-                    ((Square) gamePanel.getComponent(8 * i + j)).setWhite();
+                    sq.setWhite();
                 else if (board[i][j] == 'b')
-                    ((Square) gamePanel.getComponent(8 * i + j)).setBlack();
+                    sq.setBlack();
                 else
-                    ((Square) gamePanel.getComponent(8 * i + j)).resetColor();
+                    sq.resetColor();
+                Pair tempPair = new Pair(i, j);
+                if (heuristicMap.containsKey(tempPair)) {
+                    sqOverlay.setText(heuristicMap.get(tempPair).toString()); }
+                else
+                    sqOverlay.setText("");
             }
         }
     }
@@ -123,6 +182,20 @@ public class GUI extends JFrame implements MouseListener {
         });
     }
 
+    /**
+     *  Toggles visibility of heuristic calculations on all squares
+     */
+    private void toggleHeuristicVisibility() {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                JLayer sqLayer =(JLayer) gamePanel.getComponent(8 * i + j);
+                OverlayLayerUI sq = (OverlayLayerUI) sqLayer.getUI();
+                sq.setVisibility(!sq.isVisible());
+                sqLayer.repaint();
+            }
+        }
+    }
+
     public void showEndDialog(String message) {
         try {
             SwingUtilities.invokeAndWait(new Runnable() {
@@ -165,9 +238,17 @@ public class GUI extends JFrame implements MouseListener {
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        Square sq = (Square) e.getSource();
+        Square sq = (Square) ((JLayer)e.getSource()).getView();
         updateState(sq.getI(), sq.getJ());
         e.consume();
+    }
+
+    @Override
+    public void itemStateChanged(ItemEvent e) {
+        Object source = e.getItemSelectable();
+        if (source == debugOnCB) {
+            toggleHeuristicVisibility();
+        }
     }
 
     public GUI getSelf() {

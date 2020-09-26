@@ -6,8 +6,8 @@
  * @course Concepts in Artificial Intelligence
  */
 public class Pair {
-    private int x;
-    private int y;
+    private Integer x;
+    private Integer y;
 
     public Pair(int x, int y) {
         this.x = x;
@@ -22,12 +22,21 @@ public class Pair {
         return y;
     }
 
-    public boolean equals(Pair comp) {
-        if (comp.getY() == y && comp.getX() == x)
-            return true;
+    @Override
+    public boolean equals(Object obj) {
+        if (obj.getClass() == getClass()) {
+            if (((Pair) obj).getY() == y && ((Pair) obj).getX() == x)
+                return true;
+        }
         return false;
     }
 
+    @Override
+    public int hashCode(){
+        return Integer.parseInt((x.toString() + y.toString()));
+    }
+
+    @Override
     public String toString() {
         return "{" + x + "," + y + "}";
     }
